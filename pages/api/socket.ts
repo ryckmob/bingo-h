@@ -1,4 +1,4 @@
-import { Server as IOServer, Socket } from 'socket.io';
+import { Server as IOServer } from 'socket.io';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { Server as HTTPServer } from 'http';
 import type { Socket as NetSocket } from 'net';
@@ -11,16 +11,36 @@ interface SocketWithServer extends NetSocket {
   server: SocketServer;
 }
 
+export const config = {
+  api: {
+    bodyParser: false, // obrigatório para WebSocket
+  },
+};
+
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const socket = res.socket as SocketWithServer;
 
   if (!socket.server.io) {
-    const io = new IOServer(socket.server, { path: '/api/socket' });
+    console.log('🔌 Criando novo servidor Socket.IO...');
+    const io = new IOServer(socket.server, {
+      path: '/api/socket',
+      addTrailingSlash: false,
+    });
     socket.server.io = io;
 
-    io.on('connection', (s: Socket) => {
-      s.emit('msg', 'Servidor: Hello World!');
-      s.on('msg', (data: string) => io.emit('msg', 'Eco do servidor: ' + data));
+    io.on('connection', (s) => {
+      console.log('🟢 Cliente conectado:', s.id);
+
+      s.emit('msg', 'Servidor: conexão estabelecida!');
+
+      s.on('msg', (data: string) => {
+        console.log('📩 Mensagem recebida:', data);
+        io.emit('msg', 'Eco do servidor: ' + data);
+      });
+
+      s.on('disconnect', () => {
+        console.log('🔴 Cliente desconectado:', s.id);
+      });
     });
   }
 
