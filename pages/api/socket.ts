@@ -1,3 +1,4 @@
+// /pages/api/socket.ts
 import { Server as IOServer } from 'socket.io';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import type { Server as HTTPServer } from 'http';
@@ -13,15 +14,16 @@ interface SocketWithServer extends NetSocket {
 
 export const config = {
   api: {
-    bodyParser: false, // obrigatório para WebSocket
+    bodyParser: false,
   },
 };
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const socket = res.socket as SocketWithServer;
 
+  // Cria o servidor apenas se ainda não existir
   if (!socket.server.io) {
-    console.log('🔌 Criando novo servidor Socket.IO...');
+    console.log('🔌 Criando servidor Socket.IO global...');
     const io = new IOServer(socket.server, {
       path: '/api/socket',
       addTrailingSlash: false,
@@ -29,18 +31,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     socket.server.io = io;
 
     io.on('connection', (s) => {
-      console.log('🟢 Cliente conectado:', s.id);
+      console.log('🟢 Cliente conectado', s.id);
+      s.emit('msg', 'Servidor pronto!');
 
-      s.emit('msg', 'Servidor: conexão estabelecida!');
-
-      s.on('msg', (data: string) => {
-        console.log('📩 Mensagem recebida:', data);
-        io.emit('msg', 'Eco do servidor: ' + data);
-      });
-
-      s.on('disconnect', () => {
-        console.log('🔴 Cliente desconectado:', s.id);
-      });
+      s.on('msg', (data) => io.emit('msg', data));
     });
   }
 
