@@ -9,14 +9,25 @@ export default function SocketPage(): JSX.Element {
   const [resp, setResp] = useState<string>('');
 
   useEffect(() => {
-    socket = io({ path: '/api/socket' });
-
-    socket.on('msg', (data: string) => setResp(data));
-
+    fetch('/api/socket');
+  
+    socket = io({
+      path: '/api/socket',
+    });
+  
+    socket.on('connect', () => {
+      console.log('Conectado ao servidor Socket.IO');
+    });
+  
+    socket.on('msg', (data: string) => {
+      setResp(data);
+    });
+  
     return () => {
       socket?.disconnect();
     };
   }, []);
+  
 
   const enviarMensagem = (): void => {
     if (!msg) return;
